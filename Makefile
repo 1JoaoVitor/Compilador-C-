@@ -6,7 +6,8 @@ export TEMP := ./tmp_build
 PREPARE_TMP := $(shell mkdir -p $(TMP))
 
 CC = gcc
-CFLAGS = -Iinclude -Wall
+# Adicionei -Iinclude para ele achar o globals.h e util.h
+CFLAGS = -Iinclude -Wall 
 
 YACC = bison
 LEX = flex
@@ -19,10 +20,12 @@ SRC_DIR = src
 # Fontes
 L_SRC = $(SRC_DIR)/scanner.l
 Y_SRC = $(SRC_DIR)/parser.y
-C_SRC = $(SRC_DIR)/main.c
+# Nota: C_SRC não é mais usado nas regras abaixo para evitar confusão, 
+# mas mantemos aqui para referência se precisar
+C_SRC = $(SRC_DIR)/main.c $(SRC_DIR)/util.c 
 
 # Objetos gerados
-OBJS = $(OBJ_DIR)/parser.tab.o $(OBJ_DIR)/lex.yy.o $(OBJ_DIR)/main.o
+OBJS = $(OBJ_DIR)/parser.tab.o $(OBJ_DIR)/lex.yy.o $(OBJ_DIR)/main.o $(OBJ_DIR)/util.o
 
 all: create_dirs $(TARGET)
 
@@ -31,25 +34,26 @@ $(TARGET): $(OBJS)
 	@echo "Compilacao concluida com sucesso! Execute: ./$(TARGET)"
 
 # Regra para o Bison
-# Gera o parser.tab.c e o parser.tab.h (o -d cria o .h)
 $(OBJ_DIR)/parser.tab.o: $(Y_SRC)
 	$(YACC) -d $(Y_SRC) -o $(SRC_DIR)/parser.tab.c
 	$(CC) $(CFLAGS) -c $(SRC_DIR)/parser.tab.c -o $@
 
-# Regra para o Flex (Léxico)
-# Gera o lex.yy.c
+# Regra para o Flex
 $(OBJ_DIR)/lex.yy.o: $(L_SRC) $(SRC_DIR)/parser.tab.c
 	$(LEX) -o $(SRC_DIR)/lex.yy.c $(L_SRC)
 	$(CC) $(CFLAGS) -c $(SRC_DIR)/lex.yy.c -o $@
 
-# Regra para arquivos C genéricos (como main.c)
-$(OBJ_DIR)/main.o: $(C_SRC)
-	$(CC) $(CFLAGS) -c $(C_SRC) -o $@
+# Regra ESPECÍFICA para main.o (apenas main.c)
+$(OBJ_DIR)/main.o: $(SRC_DIR)/main.c
+	$(CC) $(CFLAGS) -c $(SRC_DIR)/main.c -o $@
 
-# Cria diretório de objetos se não existir
+# Regra ESPECÍFICA para util.o (apenas util.c)
+$(OBJ_DIR)/util.o: $(SRC_DIR)/util.c
+	$(CC) $(CFLAGS) -c $(SRC_DIR)/util.c -o $@
+
+# Cria diretório de objetos
 create_dirs:
 	@mkdir -p $(OBJ_DIR)
 
-# Limpeza dos arquivos gerados
 clean:
 	rm -rf $(OBJ_DIR) $(SRC_DIR)/lex.yy.c $(SRC_DIR)/parser.tab.c $(SRC_DIR)/parser.tab.h $(TARGET).exe

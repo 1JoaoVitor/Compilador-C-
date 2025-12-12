@@ -58,8 +58,29 @@ extern int yydebug;
     ELSE = 259,                    /* ELSE  */
     INT = 260,                     /* INT  */
     RETURN = 261,                  /* RETURN  */
-    ID = 262,                      /* ID  */
-    NUM = 263                      /* NUM  */
+    VOID = 262,                    /* VOID  */
+    WHILE = 263,                   /* WHILE  */
+    ID = 264,                      /* ID  */
+    NUM = 265,                     /* NUM  */
+    SOMA = 266,                    /* SOMA  */
+    SUB = 267,                     /* SUB  */
+    MULT = 268,                    /* MULT  */
+    DIV = 269,                     /* DIV  */
+    MENOR = 270,                   /* MENOR  */
+    MENORIGUAL = 271,              /* MENORIGUAL  */
+    MAIOR = 272,                   /* MAIOR  */
+    MAIORIGUAL = 273,              /* MAIORIGUAL  */
+    IGUAL = 274,                   /* IGUAL  */
+    DIFERENTE = 275,               /* DIFERENTE  */
+    ATRIB = 276,                   /* ATRIB  */
+    PONTOVIRGULA = 277,            /* PONTOVIRGULA  */
+    VIRGULA = 278,                 /* VIRGULA  */
+    APAREN = 279,                  /* APAREN  */
+    FPAREN = 280,                  /* FPAREN  */
+    ACOLCH = 281,                  /* ACOLCH  */
+    FCOLCH = 282,                  /* FCOLCH  */
+    ACHAVE = 283,                  /* ACHAVE  */
+    FCHAVE = 284                   /* FCHAVE  */
   };
   typedef enum yytokentype yytoken_kind_t;
 #endif

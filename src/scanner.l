@@ -1,7 +1,9 @@
 %{
 #include <stdio.h>
 #include <string.h>
+#include "../include/globals.h"
 #include "parser.tab.h"
+#include "../include/util.h"
 
 int linha_atual = 1;
 
@@ -61,10 +63,10 @@ ESPACO      [ \t\r]+
 "{"              { return ACHAVE; }
 "}"              { return FCHAVE; }
 
-{NUM}            { return NUM; }
-{ID}             { return ID; }
+{NUM}   { yylval.val = atoi(yytext); return NUM; }
+{ID}    { yylval.string = copyString(yytext); return ID; }
 
-\n               { linha_atual++; }
+\n      { linha_atual++; }
 {ESPACO}         {}
 
 .                { erro_lexico(yytext); }

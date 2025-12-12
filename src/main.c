@@ -1,31 +1,11 @@
-
 #include <stdio.h>
-#include "parser.tab.h" 
+#include <stdlib.h>
+#include "../include/globals.h"
+#include "../include/util.h"
 
-extern int yylex();
-extern char* yytext;
-extern int linha_atual;
 extern FILE *yyin;
-
-// debug
-const char* nomes_tokens[] = {
-    "FIM", "IF", "ELSE", "INT", "RETURN", "VOID", "WHILE",
-    "ID", "NUM", "SOMA", "SUB", "MULT", "DIV",
-    "MENOR", "MENORIGUAL", "MAIOR", "MAIORIGUAL", "IGUAL", "DIFERENTE", "ATRIB",
-    "PONTOVIRGULA", "VIRGULA", "APAREN", "FPAREN", "ACOLCH", "FCOLCH", "ACHAVE", "FCHAVE"
-};
-
-// Mapeia o código numérico do token para string (ajuste conforme o parser.tab.h gera)
-// Nota: O Bison gera tokens começando de 258. Essa função é um helper simples.
-void print_token(int token) {
-    if(token >= 258) {
-        printf("Token: %d (%s) \tLexema: %s \tLinha: %d\n", token, "TOKEN", yytext, linha_atual);
-    }
-    else {
-        printf("Token: %d (ASCII) \tLexema: %s \tLinha: %d\n", token, yytext, linha_atual);
-    }
-}
-
+extern int yyparse();
+extern TreeNode * savedTree; /* Importado do parser */
 
 int main(int argc, char *argv[]) {
     if (argc < 2) {
@@ -39,17 +19,14 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    printf("--- INICIANDO ANALISE LEXICA ---\n");
+    printf("--- INICIANDO ANALISE SINTATICA ---\n");
     
-    int token;
-    while ((token = yylex()) != 0) {
-        // Exibe cada token encontrado
-        // O código do token (ex: 258 para IF) vem do Bison
-        printf("LINHA %d: Token %d, Lexema: %s\n", linha_atual, token, yytext);
+    if (yyparse() == 0) {
+        printf("SUCESSO: Analise Concluida!\n");
+        printf("\n--- ARVORE SINTATICA (AST) ---\n\n");
+        printTree(savedTree); /* REQUISITO: Imprimir AST */
     }
 
-    printf("--- FIM DA ANALISE LEXICA ---\n");
     fclose(yyin);
     return 0;
 }
-

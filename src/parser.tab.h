@@ -60,34 +60,47 @@ extern int yydebug;
     RETURN = 261,                  /* RETURN  */
     VOID = 262,                    /* VOID  */
     WHILE = 263,                   /* WHILE  */
-    ID = 264,                      /* ID  */
-    NUM = 265,                     /* NUM  */
-    SOMA = 266,                    /* SOMA  */
-    SUB = 267,                     /* SUB  */
-    MULT = 268,                    /* MULT  */
-    DIV = 269,                     /* DIV  */
-    MENOR = 270,                   /* MENOR  */
-    MENORIGUAL = 271,              /* MENORIGUAL  */
-    MAIOR = 272,                   /* MAIOR  */
-    MAIORIGUAL = 273,              /* MAIORIGUAL  */
-    IGUAL = 274,                   /* IGUAL  */
-    DIFERENTE = 275,               /* DIFERENTE  */
-    ATRIB = 276,                   /* ATRIB  */
-    PONTOVIRGULA = 277,            /* PONTOVIRGULA  */
-    VIRGULA = 278,                 /* VIRGULA  */
-    APAREN = 279,                  /* APAREN  */
-    FPAREN = 280,                  /* FPAREN  */
-    ACOLCH = 281,                  /* ACOLCH  */
-    FCOLCH = 282,                  /* FCOLCH  */
-    ACHAVE = 283,                  /* ACHAVE  */
-    FCHAVE = 284                   /* FCHAVE  */
+    SOMA = 264,                    /* SOMA  */
+    SUB = 265,                     /* SUB  */
+    MULT = 266,                    /* MULT  */
+    DIV = 267,                     /* DIV  */
+    MENOR = 268,                   /* MENOR  */
+    MENORIGUAL = 269,              /* MENORIGUAL  */
+    MAIOR = 270,                   /* MAIOR  */
+    MAIORIGUAL = 271,              /* MAIORIGUAL  */
+    IGUAL = 272,                   /* IGUAL  */
+    DIFERENTE = 273,               /* DIFERENTE  */
+    ATRIB = 274,                   /* ATRIB  */
+    PONTOVIRGULA = 275,            /* PONTOVIRGULA  */
+    VIRGULA = 276,                 /* VIRGULA  */
+    APAREN = 277,                  /* APAREN  */
+    FPAREN = 278,                  /* FPAREN  */
+    ACOLCH = 279,                  /* ACOLCH  */
+    FCOLCH = 280,                  /* FCOLCH  */
+    ACHAVE = 281,                  /* ACHAVE  */
+    FCHAVE = 282,                  /* FCHAVE  */
+    ID = 283,                      /* ID  */
+    NUM = 284,                     /* NUM  */
+    LOWER_THAN_ELSE = 285          /* LOWER_THAN_ELSE  */
   };
   typedef enum yytokentype yytoken_kind_t;
 #endif
 
 /* Value type.  */
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
-typedef int YYSTYPE;
+union YYSTYPE
+{
+#line 28 "src/parser.y"
+
+    TreeNode * node;
+    char * string;
+    int val;
+    int op; /* Para guardar o token do operador */
+
+#line 101 "src/parser.tab.h"
+
+};
+typedef union YYSTYPE YYSTYPE;
 # define YYSTYPE_IS_TRIVIAL 1
 # define YYSTYPE_IS_DECLARED 1
 #endif

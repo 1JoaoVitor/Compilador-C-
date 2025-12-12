@@ -1,5 +1,6 @@
 #include "../include/globals.h"
 #include "../include/util.h"
+#include <string.h>
 
 /* Função para criar novo nó de Declaração */
 TreeNode * newDecNode(DecKind kind) {
@@ -102,4 +103,15 @@ void printTree(TreeNode * tree) {
         tree = tree->sibling; /* Passa para o próximo irmão */
     }
     UNINDENT;
+}
+
+char * copyString(char * s) {
+    int n;
+    char * t;
+    if (s==NULL) return NULL;
+    n = strlen(s)+1;
+    t = malloc(n);
+    if (t==NULL) printf("Erro de memoria no copyString\n");
+    else strcpy(t,s);
+    return t;
 }

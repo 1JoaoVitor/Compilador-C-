@@ -1,0 +1,7 @@
+/* Teste Semantico: Variaveis */
+void main(void) {
+    int x;
+    int x; /* Erro: Redeclaracao */
+    
+    y = 10; /* Erro: y nao declarado */
+}

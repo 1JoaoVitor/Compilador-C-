@@ -1,0 +1,7 @@
+/* Teste Lexico: Caracteres ilegais */
+void main(void) {
+    int valor;
+    int $dinheiro; /* $ nao existe em C- */
+    char @email;   /* @ nao existe em C- */
+    valor = 100;
+}

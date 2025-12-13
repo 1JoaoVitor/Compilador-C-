@@ -1,0 +1,7 @@
+int x; /* x Global */
+
+void main(void) {
+    int x; /* x Local (main$x) - Não deve dar erro de redeclaração */
+    x = 10;
+    output(x);
+}

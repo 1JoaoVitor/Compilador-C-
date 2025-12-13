@@ -32,6 +32,8 @@ TreeNode * addSibling(TreeNode * t, TreeNode * s) {
     int op; /* Para guardar o token do operador */
 }
 
+%define parse.error verbose
+
 /* Tokens com tipos específicos */
 /* Tokens simples (sem valor) */
 %token IF ELSE INT RETURN VOID WHILE

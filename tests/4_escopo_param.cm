@@ -1,0 +1,14 @@
+/* Teste de Escopo: Parametro vs Global */
+int a;
+
+void teste(int a) {
+    /* Este 'a' refere-se ao parametro, nao a global */
+    a = 50; 
+    output(a);
+}
+
+void main(void) {
+    a = 10; /* Global */
+    teste(20);
+    output(a); /* Deve imprimir 10, pois a funcao mudou apenas o local */
+}

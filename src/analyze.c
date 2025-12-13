@@ -2,12 +2,28 @@
 #include "../include/symtab.h"
 #include "../include/analyze.h"
 #include <string.h>
+#include <stdio.h>
+#include <stdlib.h>
 
-/* Contador para alocação de memória (simulado) */
 static int location = 0;
 
-/* Função auxiliar para percorrer a árvore recursivamente */
-/* A função 'traverse' aplica 'preProc' antes de visitar filhos e 'postProc' depois */
+/* Variável para controlar o escopo atual */
+/* Começa como "global". Quando entra numa função, muda para o nome dela */
+static char * escopo = "global";
+
+/* Helper para concatenar escopo + nome (ex: "main$x") */
+char * make_scope_name(char * name) {
+    /* Se for escopo global, não muda o nome */
+    if (strcmp(escopo, "global") == 0) return name;
+    
+    /* Se for local, cria "escopo$nome" */
+    char * buffer = malloc(strlen(escopo) + strlen(name) + 2);
+    strcpy(buffer, escopo);
+    strcat(buffer, "$");
+    strcat(buffer, name);
+    return buffer;
+}
+
 static void traverse(TreeNode * t,
                      void (* preProc) (TreeNode *),
                      void (* postProc) (TreeNode *))
@@ -25,42 +41,34 @@ static void traverse(TreeNode * t,
     }
 }
 
-/* Faz nada (usado quando não precisamos de ação no pré ou pós) */
-static void nullProc(TreeNode * t)
-{
-    if (t==NULL) return;
-    else return;
-}
+//static void nullProc(TreeNode * t) { if (t==NULL) return; else return; }
 
-/* =========================================================== */
-/* PASSO 1: CONSTRUÇÃO DA TABELA DE SÍMBOLOS                   */
-/* =========================================================== */
-
-/* Função que insere nós na tabela */
 static void insertNode(TreeNode * t)
 {
     switch (t->nodekind)
     {
         case StmtK:
-            /* Se entrar numa função, ou bloco, o ideal seria mudar o escopo. 
-               Aqui simplificamos assumindo que o parser já estruturou bem. */
+            /* Não fazemos nada específico aqui, o controle de escopo é feito no DecK FunK */
             break;
 
         case ExpK:
             switch (t->kind.exp)
             {
-                case IdK: // Case serve para ambos
+                case IdK:
                 case CallK:
-                    /* Verifica se variável/função foi declarada */
-                    /* Busca primeiro no escopo atual, depois no global se precisar */
-                    /* Por enquanto, apenas verificamos se existe na tabela (lookup) */
-                    if (st_lookup(t->attr.name) == -1)
-                        /* Neste ponto, em um compilador real, verificariamos escopos.
-                           Para este projeto básico, se não achou, marcamos erro */
-                        printf("ERRO SEMANTICO: Uso de identificador nao declarado '%s' na linha %d\n", t->attr.name, t->lineno);
-                    else
-                        /* Se já existe, adicionamos a linha atual como referência */
+                    /* USO DE VARIÁVEL / CHAMADA */
+                    /* 1. Tenta buscar no escopo LOCAL primeiro */
+                    if (st_lookup(make_scope_name(t->attr.name)) != -1) {
+                        st_insert(make_scope_name(t->attr.name), t->lineno, 0);
+                    }
+                    /* 2. Se não achar, busca no escopo GLOBAL */
+                    else if (st_lookup(t->attr.name) != -1) {
                         st_insert(t->attr.name, t->lineno, 0);
+                    }
+                    /* 3. Se não achar em nenhum, Erro */
+                    else {
+                        printf("ERRO SEMANTICO: Identificador '%s' nao declarado (Escopo: %s) na linha %d\n", t->attr.name, escopo, t->lineno);
+                    }
                     break;
                 default:
                     break;
@@ -70,76 +78,56 @@ static void insertNode(TreeNode * t)
         case DecK:
             switch (t->kind.dec)
             {
-                case VarK: // Case serve para ambos
-                case ParamK:
-                    /* Declaração de Variável: Insere na tabela */
-                    if (st_lookup(t->attr.name) == -1) {
-                        /* Inserimos com localização de memória fictícia */
-                        st_insert(t->attr.name, t->lineno, location++);
-                    } else {
-                        printf("ERRO SEMANTICO: Redeclaracao de variavel '%s' na linha %d\n", t->attr.name, t->lineno);
-                    }
-                    break;
-
                 case FunK:
-                    /* Declaração de Função */
+                    /* DECLARAÇÃO DE FUNÇÃO */
                     if (st_lookup(t->attr.name) == -1) {
+                        /* Funções sempre ficam no escopo global na tabela */
                         st_insert(t->attr.name, t->lineno, location++);
-                        /* Dica: Aqui poderiamos mudar a variavel 'escopo_atual' para o nome da função */
+                        
+                        /* IMPORTANTE: Mudamos o escopo atual para o nome da função */
+                        escopo = t->attr.name; 
                     } else {
                         printf("ERRO SEMANTICO: Redeclaracao de funcao '%s' na linha %d\n", t->attr.name, t->lineno);
                     }
                     break;
+
+                case VarK:
+                case ParamK:
+                    /* DECLARAÇÃO DE VARIÁVEL/PARAMETRO */
+                    /* Verifica apenas se já existe NO ESCOPO ATUAL */
+                    /* Isso permite ter int x global e int x local */
+                    if (st_lookup(make_scope_name(t->attr.name)) == -1) {
+                        st_insert(make_scope_name(t->attr.name), t->lineno, location++);
+                    } else {
+                        printf("ERRO SEMANTICO: Redeclaracao de variavel '%s' no escopo '%s' na linha %d\n", t->attr.name, escopo, t->lineno);
+                    }
+                    break;
             }
             break;
+    }
+}
+
+/* Função chamada DEPOIS de processar os filhos de um nó */
+static void afterNode(TreeNode * t) {
+    /* Se terminamos de processar uma função, voltamos para o escopo global */
+    if (t->nodekind == DecK && t->kind.dec == FunK) {
+        escopo = "global";
     }
 }
 
 void buildSymtab(TreeNode * syntaxTree)
 {
-    // Funções nativas do C-
     st_insert("input", 0, 0);
     st_insert("output", 0, 0);
-
-    /* Percorre a árvore em pre-order (visita pai antes dos filhos) para garantir
-       que declarações sejam processadas antes do uso */
-    traverse(syntaxTree, insertNode, nullProc);
     
-    /* Requisito: Imprimir a tabela ao final */
+    /* Usamos afterNode para saber quando SAIMOS de uma função */
+    traverse(syntaxTree, insertNode, afterNode);
+    
     printf("\n--- TABELA DE SIMBOLOS ---\n\n");
     printSymTab(stdout);
 }
 
-/* =========================================================== */
-/* PASSO 2: CHECAGEM DE TIPOS (TYPE CHECK)                     */
-/* =========================================================== */
-
-static void checkNode(TreeNode * t)
-{
-    switch (t->nodekind)
-    {
-        case ExpK:
-            switch (t->kind.exp)
-            {
-                case OpK:
-                    /* Exemplo simples: Verificar se os dois filhos são do mesmo tipo */
-                    /* (Lógica completa de tipos seria implementada aqui) */
-                    break;
-                default:
-                    break;
-            }
-            break;
-        case StmtK:
-            if (t->kind.stmt == IfK)
-                /* Verificar se a condição do IF é Booleana ou Inteira */
-                ;
-            break;
-        default:
-            break;
-    }
-}
-
 void typeCheck(TreeNode * syntaxTree)
 {
-    traverse(syntaxTree, nullProc, checkNode);
+    /* Simplificado para este exemplo */
 }

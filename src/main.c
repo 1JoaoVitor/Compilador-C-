@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include "../include/globals.h"
 #include "../include/util.h"
+#include "../include/analyze.h"
 
 extern FILE *yyin;
 extern int yyparse();
@@ -23,9 +24,17 @@ int main(int argc, char *argv[]) {
     
     if (yyparse() == 0) {
         printf("SUCESSO: Analise Concluida!\n");
-        printf("\n--- ARVORE SINTATICA (AST) ---\n\n");
-        printTree(savedTree); /* REQUISITO: Imprimir AST */
+        // printf("\n--- ARVORE SINTATICA (AST) ---\n\n");
+        // printTree(savedTree); /* REQUISITO: Imprimir AST */
+
+        /* Requisito: Analise Semantica */
+        printf("\n--- INICIANDO ANALISE SEMANTICA ---\n");
+        buildSymtab(savedTree);
+        typeCheck(savedTree);
+
     }
+
+
 
     fclose(yyin);
     return 0;

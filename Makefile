@@ -22,10 +22,10 @@ L_SRC = $(SRC_DIR)/scanner.l
 Y_SRC = $(SRC_DIR)/parser.y
 # Nota: C_SRC não é mais usado nas regras abaixo para evitar confusão, 
 # mas mantemos aqui para referência se precisar
-C_SRC = $(SRC_DIR)/main.c $(SRC_DIR)/util.c 
+C_SRC = $(SRC_DIR)/main.c $(SRC_DIR)/util.c $(SRC_DIR)/analyze.c
 
 # Objetos gerados
-OBJS = $(OBJ_DIR)/parser.tab.o $(OBJ_DIR)/lex.yy.o $(OBJ_DIR)/main.o $(OBJ_DIR)/util.o $(OBJ_DIR)/symtab.o
+OBJS = $(OBJ_DIR)/parser.tab.o $(OBJ_DIR)/lex.yy.o $(OBJ_DIR)/main.o $(OBJ_DIR)/util.o $(OBJ_DIR)/symtab.o $(OBJ_DIR)/analyze.o
 
 all: create_dirs $(TARGET)
 
@@ -53,6 +53,9 @@ $(OBJ_DIR)/util.o: $(SRC_DIR)/util.c
 
 $(OBJ_DIR)/symtab.o: $(SRC_DIR)/symtab.c
 	$(CC) $(CFLAGS) -c $(SRC_DIR)/symtab.c -o $@
+
+$(OBJ_DIR)/analyze.o: $(SRC_DIR)/analyze.c
+	$(CC) $(CFLAGS) -c $(SRC_DIR)/analyze.c -o $@
 
 # Cria diretório de objetos
 create_dirs:

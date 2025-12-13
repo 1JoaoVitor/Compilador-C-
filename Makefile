@@ -25,7 +25,7 @@ Y_SRC = $(SRC_DIR)/parser.y
 C_SRC = $(SRC_DIR)/main.c $(SRC_DIR)/util.c 
 
 # Objetos gerados
-OBJS = $(OBJ_DIR)/parser.tab.o $(OBJ_DIR)/lex.yy.o $(OBJ_DIR)/main.o $(OBJ_DIR)/util.o
+OBJS = $(OBJ_DIR)/parser.tab.o $(OBJ_DIR)/lex.yy.o $(OBJ_DIR)/main.o $(OBJ_DIR)/util.o $(OBJ_DIR)/symtab.o
 
 all: create_dirs $(TARGET)
 
@@ -50,6 +50,9 @@ $(OBJ_DIR)/main.o: $(SRC_DIR)/main.c
 # Regra ESPECÍFICA para util.o (apenas util.c)
 $(OBJ_DIR)/util.o: $(SRC_DIR)/util.c
 	$(CC) $(CFLAGS) -c $(SRC_DIR)/util.c -o $@
+
+$(OBJ_DIR)/symtab.o: $(SRC_DIR)/symtab.c
+	$(CC) $(CFLAGS) -c $(SRC_DIR)/symtab.c -o $@
 
 # Cria diretório de objetos
 create_dirs:

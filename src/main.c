@@ -3,6 +3,7 @@
 #include "../include/globals.h"
 #include "../include/util.h"
 #include "../include/analyze.h"
+#include "../include/codegen.h"
 
 extern FILE *yyin;
 extern int yyparse();
@@ -31,6 +32,9 @@ int main(int argc, char *argv[]) {
         printf("\n--- INICIANDO ANALISE SEMANTICA ---\n");
         buildSymtab(savedTree);
         typeCheck(savedTree);
+
+        /* Geração de Código */
+        codeGen(savedTree, "saida.txt");
 
     }
 

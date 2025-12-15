@@ -93,6 +93,11 @@ var_declaration: type_specifier ID PONTOVIRGULA
                    t->attr.val = $4;
                    $$->child[0] = t; 
                }
+               | error PONTOVIRGULA
+               {
+                   yyerrok;
+                   $$ = NULL;
+               }
                ;
 
 type_specifier: INT { $$ = INT; }
@@ -162,6 +167,11 @@ statement: expression_stmt { $$ = $1; }
 
 expression_stmt: expression PONTOVIRGULA { $$ = $1; }
                | PONTOVIRGULA { $$ = NULL; }
+               | error PONTOVIRGULA
+               {
+                   yyerrok;
+                   $$ = NULL;
+               }
                ;
 
 selection_stmt: IF APAREN expression FPAREN statement %prec LOWER_THAN_ELSE

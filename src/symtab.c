@@ -31,6 +31,7 @@ typedef struct BucketListRec {
     char * name;
     LineList lines;
     int memloc; /* Localização na memória */
+    ExpType type;
     struct BucketListRec * next;
 } * BucketList;
 
@@ -38,7 +39,7 @@ typedef struct BucketListRec {
 static BucketList hashTable[SIZE];
 
 /* Insere na tabela */
-void st_insert(char * name, int lineno, int loc) {
+void st_insert(char * name, int lineno, int loc, ExpType type) {
     int h = hash(name);
     BucketList l = hashTable[h];
     
@@ -53,6 +54,7 @@ void st_insert(char * name, int lineno, int loc) {
         l->lines = (LineList) malloc(sizeof(struct LineListRec));
         l->lines->lineno = lineno;
         l->memloc = loc;
+        l->type = type;
         l->lines->next = NULL;
         l->next = hashTable[h];
         hashTable[h] = l; /* Insere no início da lista (LIFO) */
@@ -76,17 +78,35 @@ int st_lookup(char * name) {
     else return l->memloc;
 }
 
+/* Retorna o tipo da variável/função */
+ExpType st_lookup_type(char * name) {
+    int h = hash(name);
+    BucketList l = hashTable[h];
+    while ((l != NULL) && (strcmp(name, l->name) != 0))
+        l = l->next;
+    if (l == NULL) return Void; /* Se não achar, assume Void (ou erro) */
+    else return l->type;
+}
+
 /* Imprime a tabela (Requisito do PDF) */
 void printSymTab(FILE * listing) {
     int i;
-    fprintf(listing, "Nome           Loc   Numeros de Linha\n");
-    fprintf(listing, "-------------  ----  ----------------\n");
+    fprintf(listing, "Escopo/Nome    Tipo    Loc   Numeros de Linha\n");
+    fprintf(listing, "-------------  ------  ----  ----------------\n");
     
     for (i = 0; i < SIZE; ++i) {
         if (hashTable[i] != NULL) {
             BucketList l = hashTable[i];
             while (l != NULL) {
                 fprintf(listing, "%-14s ", l->name);
+
+                switch(l->type) {
+                    case Integer: fprintf(listing, "%-7s ", "int"); break;
+                    case Void:    fprintf(listing, "%-7s ", "void"); break;
+                    case Boolean: fprintf(listing, "%-7s ", "bool"); break;
+                    default:      fprintf(listing, "%-7s ", "unknown"); break;
+                }
+
                 fprintf(listing, "%-5d  ", l->memloc);
                 
                 LineList t = l->lines;

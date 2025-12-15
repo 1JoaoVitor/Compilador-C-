@@ -1,0 +1,9 @@
+void main(void) {
+    int x;
+    int y   /* Erro 1: Faltou ponto e virgula */
+
+    x = 10;
+    y = 20  /* Erro 2: Faltou ponto e virgula */
+
+    output(x);
+}

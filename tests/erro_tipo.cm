@@ -1,0 +1,13 @@
+/* Teste de erro de tipos */
+void funcaoVoid(void) {
+    return;
+}
+
+void main(void) {
+    int x;
+    x = funcaoVoid(); /* ERRO: Atribuindo Void para Int */
+
+    if (funcaoVoid()) { /* ERRO: Condição Void */
+        x = 1;
+    }
+}

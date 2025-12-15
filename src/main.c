@@ -25,8 +25,8 @@ int main(int argc, char *argv[]) {
     
     if (yyparse() == 0) {
         printf("SUCESSO: Analise Concluida!\n");
-        // printf("\n--- ARVORE SINTATICA (AST) ---\n\n");
-        // printTree(savedTree); /* REQUISITO: Imprimir AST */
+        printf("\n--- ARVORE SINTATICA (AST) ---\n\n");
+        printTree(savedTree); /* REQUISITO: Imprimir AST */
 
         /* Requisito: Analise Semantica */
         printf("\n--- INICIANDO ANALISE SEMANTICA ---\n");

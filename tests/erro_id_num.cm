@@ -1,3 +1,4 @@
 void main(void) {
     int x1; /* x1 não é um ID válido em C- */
+    int a_; /* underscores não são válidos em C- */
 }

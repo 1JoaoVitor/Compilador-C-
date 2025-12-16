@@ -2,14 +2,11 @@
 #include <stdlib.h>
 #include <string.h>
 #include "../include/symtab.h"
+#include <string.h>
 
-// número primo ajuda na distribuição
 #define SIZE 211
-
-/* Potência de 2 para o deslocamento (shift) na função hash */
 #define SHIFT 4
 
-/* Função Hash: Transforma o nome (string) em um índice numérico */
 static int hash(char * key) {
     int temp = 0;
     int i = 0;
@@ -20,46 +17,73 @@ static int hash(char * key) {
     return temp;
 }
 
-/* Estrutura da Lista de Linhas (para saber todas as linhas onde a variável aparece) */
 typedef struct LineListRec { 
     int lineno;
     struct LineListRec * next;
 } * LineList;
 
-/* Estrutura do "Bucket" (o registro da variável na tabela) */
 typedef struct BucketListRec { 
-    char * name;
+    char * name;   /* Chave única (ex: main$x) usada na busca */
+    char * id;     /* Nome limpo para exibição (ex: x) */
+    char * scope;  /* Escopo para exibição (ex: main) */
+    char * type;   /* Tipo para exibição (ex: int) */
     LineList lines;
-    int memloc; /* Localização na memória */
-    ExpType type;
+    int memloc; 
     struct BucketListRec * next;
 } * BucketList;
 
-/* A Tabela Hash em si */
 static BucketList hashTable[SIZE];
 
-/* Insere na tabela */
-void st_insert(char * name, int lineno, int loc, ExpType type) {
+/* Helper para extrair o nome limpo de "main$x" -> "x" */
+char * cleanName(char * mangled) {
+    char * dollar = strchr(mangled, '$');
+    if (dollar) return dollar + 1; /* Retorna o que vem depois do $ */
+    return mangled; /* Se não tem $, retorna o próprio nome */
+}
+
+ExpType st_lookup_type(char * name) {
     int h = hash(name);
     BucketList l = hashTable[h];
     
-    /* Procura se já existe */
+    /* Procura na lista encadeada */
     while ((l != NULL) && (strcmp(name, l->name) != 0))
         l = l->next;
     
-    /* Se não achou, cria um novo registro */
-    if (l == NULL) {
+    /* Se não achou, retorna Void (padrão de segurança) */
+    if (l == NULL) return Void;
+    
+    /* Converte a string salva para o Enum */
+    if (strcmp(l->type, "int") == 0) return Integer;
+    if (strcmp(l->type, "void") == 0) return Void;
+    
+    return Void;
+}
+
+void st_insert(char * name, int lineno, int loc, char * scope, char * typeID) {
+    int h = hash(name);
+    BucketList l = hashTable[h];
+    
+    while ((l != NULL) && (strcmp(name, l->name) != 0))
+        l = l->next;
+    
+    if (l == NULL) { /* Nova variável */
         l = (BucketList) malloc(sizeof(struct BucketListRec));
         l->name = name;
+        /* Copiamos as strings para garantir persistência */
         l->lines = (LineList) malloc(sizeof(struct LineListRec));
         l->lines->lineno = lineno;
         l->memloc = loc;
-        l->type = type;
         l->lines->next = NULL;
+        
+        /* Novos campos visuais */
+        l->scope = strdup(scope);
+        l->type = strdup(typeID);
+        l->id = strdup(cleanName(name)); 
+
         l->next = hashTable[h];
-        hashTable[h] = l; /* Insere no início da lista (LIFO) */
+        hashTable[h] = l;
     } 
-    else { /* Se já existe, apenas adiciona a nova linha na lista de referências */
+    else { /* Já existe, apenas adiciona linha */
         LineList t = l->lines;
         while (t->next != NULL) t = t->next;
         t->next = (LineList) malloc(sizeof(struct LineListRec));
@@ -68,7 +92,6 @@ void st_insert(char * name, int lineno, int loc, ExpType type) {
     }
 }
 
-/* Busca na tabela */
 int st_lookup(char * name) {
     int h = hash(name);
     BucketList l = hashTable[h];
@@ -78,40 +101,22 @@ int st_lookup(char * name) {
     else return l->memloc;
 }
 
-/* Retorna o tipo da variável/função */
-ExpType st_lookup_type(char * name) {
-    int h = hash(name);
-    BucketList l = hashTable[h];
-    while ((l != NULL) && (strcmp(name, l->name) != 0))
-        l = l->next;
-    if (l == NULL) return Void; /* Se não achar, assume Void (ou erro) */
-    else return l->type;
-}
-
-/* Imprime a tabela (Requisito do PDF) */
 void printSymTab(FILE * listing) {
     int i;
-    fprintf(listing, "Escopo/Nome    Tipo    Loc   Numeros de Linha\n");
-    fprintf(listing, "-------------  ------  ----  ----------------\n");
+    /* Cabeçalho formatado com as novas colunas */
+    fprintf(listing, "Nome           Escopo         Tipo    Loc   Linhas\n");
+    fprintf(listing, "-------------  -------------  ------  ----  ------\n");
     
     for (i = 0; i < SIZE; ++i) {
         if (hashTable[i] != NULL) {
             BucketList l = hashTable[i];
             while (l != NULL) {
-                fprintf(listing, "%-14s ", l->name);
-
-                switch(l->type) {
-                    case Integer: fprintf(listing, "%-7s ", "int"); break;
-                    case Void:    fprintf(listing, "%-7s ", "void"); break;
-                    case Boolean: fprintf(listing, "%-7s ", "bool"); break;
-                    default:      fprintf(listing, "%-7s ", "unknown"); break;
-                }
-
-                fprintf(listing, "%-5d  ", l->memloc);
+                /* Imprime: ID Limpo, Escopo, Tipo, Loc */
+                fprintf(listing, "%-14s %-14s %-7s %-5d ", l->id, l->scope, l->type, l->memloc);
                 
                 LineList t = l->lines;
                 while (t != NULL) {
-                    fprintf(listing, "%4d ", t->lineno);
+                    fprintf(listing, "%d ", t->lineno);
                     t = t->next;
                 }
                 fprintf(listing, "\n");

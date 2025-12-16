@@ -1,0 +1,10 @@
+digraph G {
+  node [shape=box, fontname="Arial"];
+  node0 [label="Func main"];
+  node1 [label="Param x"];
+  node0 -> node1;
+  node2 [label="Return"];
+  node3 [label="0"];
+  node2 -> node3;
+  node0 -> node2;
+}

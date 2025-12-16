@@ -9,6 +9,8 @@ TreeNode * newDecNode(DecKind);
 
 void printTree(TreeNode *);
 
+void createDot(TreeNode * tree);
+
 /* Função do strdup que as vezes falta no windows */
 char * copyString(char *);
 

@@ -170,7 +170,6 @@ static void checkNode(TreeNode * t) {
             switch (t->kind.stmt) {
                 case IfK:
                 case WhileK:
-                    /* Apenas verifica se não é Void. Boolean ou Integer são aceitos como True/False */
                     if (t->child[0]->type == Void)
                         typeError(t->child[0], "Condicao do IF/WHILE nao pode ser Void");
                     break;
@@ -179,7 +178,23 @@ static void checkNode(TreeNode * t) {
             break;
             
         case DecK:
-            if (t->kind.dec == FunK) escopo = "global";
+            /* VERIFICAÇÃO RIGOROSA DA MAIN */
+            if (t->kind.dec == FunK) {
+                /* Se a função se chama "main" */
+                if (strcmp(t->attr.name, "main") == 0) {
+                    /* 1. Verifica se retorna VOID */
+                    if (t->type != Void) {
+                        typeError(t, "A funcao 'main' deve ser declarada como 'void main(void)'");
+                    }
+                    /* 2. Verifica se não tem parâmetros */
+                    /* child[0] guarda os parâmetros. Se não for NULL e não for Void (caso especial), erro. */
+                    if (t->child[0] != NULL && t->child[0]->type != Void) {
+                         typeError(t, "A funcao 'main' nao deve receber parametros (use void)");
+                    }
+                }
+                /* Sai do escopo */
+                escopo = "global";
+            }
             break;
     }
 }

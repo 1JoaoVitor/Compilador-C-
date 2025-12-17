@@ -1,0 +1,7 @@
+void main ( void ) {
+2 int v [10];
+3 int i ;
+4 i = 0;
+5 v [ i ] = 100;
+6 output ( v [ i ]) ;
+7 }

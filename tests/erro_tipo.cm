@@ -1,4 +1,3 @@
-/* Teste de erro de tipos */
 void funcaoVoid(void) {
     return;
 }

@@ -6,37 +6,91 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-/* Contador para variáveis temporárias (t1, t2, t3...) */
-static int tmpOffset = 0;
 
-/* Contador para labels (L1, L2...) usados em IF/WHILE */
+static int tmpOffset = 0;
 static int labelOffset = 0;
 
-/* Gera um novo nome temporário (t1, t2...) */
 static char * newTemp() {
-    static char buffer[10];
+    static char buffer[50];
     sprintf(buffer, "t%d", ++tmpOffset);
-    /* Precisamos duplicar a string para não perder o valor */
     char * s = (char *) malloc(strlen(buffer) + 1);
+    if (s == NULL) { printf("Erro de memoria\n"); exit(1); }
     strcpy(s, buffer);
     return s;
 }
 
-/* Gera um novo label (L1, L2...) */
+
 static char * newLabel() {
-    static char buffer[10];
+    static char buffer[50];
     sprintf(buffer, "L%d", ++labelOffset);
     char * s = (char *) malloc(strlen(buffer) + 1);
+    if (s == NULL) { printf("Erro de memoria\n"); exit(1); }
     strcpy(s, buffer);
     return s;
 }
 
-/* Função recursiva principal para gerar código */
-/* Retorna o "nome" da variável onde o resultado do nó está guardado */
+
+static void emitCode(char * op, char * arg1, char * arg2, char * res) {
+    
+    if (strcmp(op, "ASSIGN") == 0) {
+        printf("%s = %s\n", res, arg1);
+    }
+    else if (strcmp(op, "+") == 0 || strcmp(op, "-") == 0 || 
+             strcmp(op, "*") == 0 || strcmp(op, "/") == 0 ||
+             strcmp(op, "<") == 0 || strcmp(op, "==") == 0 ||
+             strcmp(op, ">") == 0 || strcmp(op, ">=") == 0 ||
+             strcmp(op, "<=") == 0 || strcmp(op, "!=") == 0) {
+        printf("%s = %s %s %s\n", res, arg1, op, arg2);
+    }
+
+    else if (strcmp(op, "LOAD") == 0) {
+        printf("%s = %s[%s]\n", res, arg1, arg2);
+    }
+    else if (strcmp(op, "STORE") == 0) {  
+        printf("%s[%s] = %s\n", arg1, arg2, res);
+    }
+    else if (strcmp(op, "GOTO") == 0) {
+        printf("goto %s\n", arg1);
+    }
+    else if (strcmp(op, "IFF") == 0) {
+        printf("if_false %s goto %s\n", arg1, arg2);
+    }
+    else if (strcmp(op, "LAB") == 0) {
+        printf("%s:\n", arg1); 
+    }
+
+    else if (strcmp(op, "PARAM") == 0) {
+        printf("param %s\n", arg1);
+    }
+    else if (strcmp(op, "CALL") == 0) {
+        if (res != NULL)
+            printf("%s = call %s, %s\n", res, arg1, arg2);
+        else
+            printf("call %s, %s\n", arg1, arg2);
+    }
+    else if (strcmp(op, "RET") == 0) {
+        if (arg1 != NULL) printf("return %s\n", arg1);
+        else printf("return\n");
+    }
+    else if (strcmp(op, "FUN") == 0) {
+        printf("\nfunc %s\n", arg1);
+    }
+    else if (strcmp(op, "END") == 0) {
+        printf("end %s\n", arg1);
+    }
+    else {
+        printf("%s = %s %s %s\n", res, arg1, op, arg2);
+    }
+}
+
+
 static char * cGen(TreeNode * tree) {
+    char * result = NULL; 
+    
     char * p1, * p2;
     char * label1, * label2;
     char * currentTemp;
+    char * offsetTemp;
 
     if (tree == NULL) return NULL;
 
@@ -45,150 +99,171 @@ static char * cGen(TreeNode * tree) {
     case StmtK:
         switch (tree->kind.stmt) {
             case IfK:
-                p1 = cGen(tree->child[0]); /* Condição */
-                label1 = newLabel(); /* Label para o ELSE (ou fim) */
-                label2 = newLabel(); /* Label para o FIM */
+                p1 = cGen(tree->child[0]); 
+                label1 = newLabel();
+                label2 = newLabel(); 
                 
-                printf("if_false %s goto %s\n", p1, label1);
+                emitCode("IFF", p1, label1, NULL); /* if_false cond goto L1 */
                 
-                cGen(tree->child[1]); /* Bloco THEN */
+                cGen(tree->child[1]); 
                 
                 if (tree->child[2] != NULL) {
-                    printf("goto %s\n", label2); /* Pula o else */
-                    printf("label %s\n", label1); /* Começo do Else */
-                    cGen(tree->child[2]); /* Bloco ELSE */
-                    printf("label %s\n", label2); /* Fim do IF */
+                    emitCode("GOTO", label2, NULL, NULL);
+                    emitCode("LAB", label1, NULL, NULL);
+                    cGen(tree->child[2]); /* Else */
+                    emitCode("LAB", label2, NULL, NULL);
                 } else {
-                    printf("label %s\n", label1); /* Fim do IF (sem else) */
+                    emitCode("LAB", label1, NULL, NULL);
                 }
                 break;
 
             case WhileK:
-                label1 = newLabel(); /* Começo do loop */
-                label2 = newLabel(); /* Saída do loop */
+                label1 = newLabel(); 
+                label2 = newLabel(); 
                 
-                printf("label %s\n", label1);
-                p1 = cGen(tree->child[0]); /* Condição */
-                printf("if_false %s goto %s\n", p1, label2);
+                emitCode("LAB", label1, NULL, NULL);
+                p1 = cGen(tree->child[0]); 
+                emitCode("IFF", p1, label2, NULL);
                 
-                cGen(tree->child[1]); /* Corpo */
-                printf("goto %s\n", label1); /* Volta pro começo */
-                printf("label %s\n", label2);
+                cGen(tree->child[1]); 
+                emitCode("GOTO", label1, NULL, NULL);
+                emitCode("LAB", label2, NULL, NULL);
                 break;
 
             case ReturnK:
                 p1 = cGen(tree->child[0]);
-                printf("return %s\n", p1 ? p1 : "");
+                emitCode("RET", p1, NULL, NULL);
                 break;
                 
             case CompoundK:
-                /* Apenas processa os filhos em ordem */
-                cGen(tree->child[0]); // Declarações locais (ignoradas na geração simples)
-                cGen(tree->child[1]); // Statements
+                cGen(tree->child[0]); 
+                cGen(tree->child[1]); 
                 break;
         }
-        /* Statements não retornam valor temporário */
-        return NULL;
+        break;
 
     case ExpK:
         switch (tree->kind.exp) {
             case OpK:
                 if (tree->attr.op == ATRIB) {
-                    p1 = cGen(tree->child[0]); /* Variável destino */
-                    p2 = cGen(tree->child[1]); /* Valor */
-                    printf("%s = %s\n", p1, p2);
-                    return p1;
+                    TreeNode * lhs = tree->child[0];
+                    p2 = cGen(tree->child[1]); 
+
+                    /* CASO 1: Atribuição em Vetor (v[i] = valor) */
+                    if (lhs->nodekind == ExpK && lhs->kind.exp == IdK && lhs->child[0] != NULL) {
+                        p1 = cGen(lhs->child[0]); /* Indice */
+                        offsetTemp = newTemp();
+                        emitCode("*", p1, "4", offsetTemp); /* Offset = i * 4 */
+                        /* STORE: vec[offset] = val */
+                        emitCode("STORE", lhs->attr.name, offsetTemp, p2);
+                    } 
+                    /* CASO 2: Atribuição Simples (x = valor) */
+                    else {
+                        emitCode("ASSIGN", p2, NULL, lhs->attr.name);
+                    }
+                    result = p2;
                 }
-                
-                /* Operação Aritmética */
-                p1 = cGen(tree->child[0]);
-                p2 = cGen(tree->child[1]);
-                currentTemp = newTemp();
-                
-                char * op = "";
-                switch(tree->attr.op) {
-                    case SOMA: op = "+"; break;
-                    case SUB: op = "-"; break;
-                    case MULT: op = "*"; break;
-                    case DIV: op = "/"; break;
-                    case MENOR: op = "<"; break;
-                    case IGUAL: op = "=="; break;
-                    /* Adicione outros operadores aqui conforme globals.h */
-                    default: op = "?"; break;
-                }
-                
-                printf("%s = %s %s %s\n", currentTemp, p1, op, p2);
-                return currentTemp;
-
-            case ConstK:
-                currentTemp = newTemp();
-                printf("%s = %d\n", currentTemp, tree->attr.val);
-                return currentTemp;
-
-            case IdK:
-                /* Retorna o próprio nome da variável */
-                return tree->attr.name;
-
-            case CallK:
-                /* Trata chamadas de função */
-                /* Processa argumentos primeiro */
-                {
-                    TreeNode * arg = tree->child[0];
-                    // Precisamos inverter ou listar argumentos. 
-                    // Simplificação: apenas gera o código dos args
-                    while (arg != NULL) {
-                        char * t = cGen(arg);
-                        printf("param %s\n", t);
-                        arg = arg->sibling;
+                else {
+                    /* OPERAÇÕES ARITMÉTICAS */
+                    p1 = cGen(tree->child[0]);
+                    p2 = cGen(tree->child[1]);
+                    currentTemp = newTemp();
+                    
+                    char * op = "+";
+                    switch(tree->attr.op) {
+                        case SOMA: op = "+"; break;
+                        case SUB: op = "-"; break;
+                        case MULT: op = "*"; break;
+                        case DIV: op = "/"; break;
+                        case MENOR: op = "<"; break;
+                        case IGUAL: op = "=="; break;
+                        case MAIOR: op = ">"; break;
+                        case MAIORIGUAL: op = ">="; break;
+                        case MENORIGUAL: op = "<="; break;
+                        case DIFERENTE: op = "!="; break;
+                        default: op = "?"; break;
                     }
                     
-                    /* Casos especiais para output/input ou chamada normal */
+                    emitCode(op, p1, p2, currentTemp);
+                    result = currentTemp;
+                }
+                break;
+
+            case ConstK:
+                {
+                    char * valStr = (char *) malloc(20);
+                    if (valStr == NULL) { printf("Erro de memoria\n"); exit(1); }
+                    sprintf(valStr, "%d", tree->attr.val);
+                    result = valStr;
+                }
+                break;
+
+            case IdK:
+                if (tree->child[0] != NULL) {
+                    p1 = cGen(tree->child[0]); 
+                    offsetTemp = newTemp();
+                    emitCode("*", p1, "4", offsetTemp);
+                    
+                    currentTemp = newTemp();
+                    emitCode("LOAD", tree->attr.name, offsetTemp, currentTemp);
+                    result = currentTemp;
+                }
+                else {
+                    result = tree->attr.name;
+                }
+                break;
+
+            case CallK:
+                {
+                    TreeNode * arg = tree->child[0];
+                    int n = 0;
+                    while (arg != NULL) {
+                        char * t = cGen(arg);
+                        emitCode("PARAM", t, NULL, NULL);
+                        arg = arg->sibling;
+                        n++;
+                    }
+                    
+                    char nStr[20]; 
+                    sprintf(nStr, "%d", n);
+
                     if (strcmp(tree->attr.name, "input") == 0) {
                         currentTemp = newTemp();
-                        printf("%s = call input, 0\n", currentTemp);
-                        return currentTemp;
+                        emitCode("CALL", "input", "0", currentTemp);
+                        result = currentTemp;
                     } 
                     else if (strcmp(tree->attr.name, "output") == 0) {
-                        printf("call output, 1\n");
-                        return NULL;
+                        emitCode("CALL", "output", "1", NULL);
+                        result = NULL;
                     }
                     else {
                         currentTemp = newTemp();
-                        // Contar argumentos seria ideal, aqui pusemos 'n' genérico
-                        printf("%s = call %s, n\n", currentTemp, tree->attr.name);
-                        return currentTemp;
+                        emitCode("CALL", tree->attr.name, nStr, currentTemp);
+                        result = currentTemp;
                     }
                 }
                 break;
+            
             case TypeK:
                 break;
         }
         break;
         
     case DecK:
-        /* Declarações não geram código executável, apenas reservam espaço.
-           Ignoraremos por enquanto, pois a tabela de símbolos já cuidou disso. */
-           if (tree->kind.dec == FunK) {
-            printf("func %s\n", tree->attr.name); /* Marca o início da função */
-            
-            /* O filho 0 são os parâmetros (ignoramos na geração simples) */
-            /* O filho 1 é o corpo (Compound Statement) - Visitamos ele! */
+        if (tree->kind.dec == FunK) {
+            emitCode("FUN", tree->attr.name, NULL, NULL);
             cGen(tree->child[1]);
-            
-            printf("end %s\n", tree->attr.name); /* Marca o fim (opcional) */
+            emitCode("END", tree->attr.name, NULL, NULL);
         }
         break;
     }
     
-    /* Processa o próximo comando (irmão) */
     cGen(tree->sibling);
     
-    return NULL;
+    return result;
 }
 
-void codeGen(TreeNode * syntaxTree, char * codefile) {
-    // Redireciona stdout para um arquivo se quiser, ou imprime na tela
-    // Por simplicidade, imprimiremos na tela
-    printf("\n--- CODIGO INTERMEDIARIO (3 ENDERECOS) ---\n\n");
+void codeGen(TreeNode * syntaxTree) {
+    printf("\n--- CODIGO INTERMEDIARIO (TAC) ---\n\n");
     cGen(syntaxTree);
 }

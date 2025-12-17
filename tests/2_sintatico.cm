@@ -1,11 +1,6 @@
-/* Teste Sintatico: Erros de estrutura */
 void main(void) {
     int x;
-    x = 10;
-    
-    if (x > 0) {
-        x = x - 1;
-    /* Faltou fechar a chave aqui! */
-    
-    output(x);
+    x = ;       
+    x = 10;     
+    y = ;     
 }

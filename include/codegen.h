@@ -3,7 +3,6 @@
 
 #include "globals.h"
 
-/* Gera o código intermediário percorrendo a AST */
-void codeGen(TreeNode * syntaxTree, char * codefile);
+void codeGen(TreeNode * syntaxTree);
 
 #endif

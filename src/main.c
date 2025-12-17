@@ -7,9 +7,8 @@
 
 extern FILE *yyin;
 extern int yyparse();
-extern TreeNode * savedTree; /* Importado do parser */
+extern TreeNode * savedTree;
 
-int lineno = 0;
 
 int main(int argc, char *argv[]) {
     if (argc < 2) {
@@ -23,20 +22,16 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    printf("--- INICIANDO ANALISE SINTATICA ---\n");
+    printf("--- ANALISE SINTATICA ---\n");
     
     if (yyparse() == 0) {
-        printf("SUCESSO: Analise Concluida!\n");
-        printf("\n--- ARVORE SINTATICA (AST) ---\n\n");
-        printTree(savedTree); /* REQUISITO: Imprimir AST */
-
-        /* Requisito: Analise Semantica */
-        printf("\n--- INICIANDO ANALISE SEMANTICA ---\n");
+        printf("Analise concluida.\n\n");
+    
+        printf("\n--- ANALISE SEMANTICA ---\n");
         buildSymtab(savedTree);
         typeCheck(savedTree);
-
-        /* Geração de Código */
-        codeGen(savedTree, "saida.txt");
+    
+        codeGen(savedTree);
 
         createDot(savedTree);
     }

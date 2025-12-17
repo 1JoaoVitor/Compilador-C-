@@ -8,10 +8,9 @@
 
 static int location = 0;
 
-/* Variável para controlar o escopo atual */
 static char * escopo = "global";
 
-/* Helper para concatenar escopo + nome (ex: "main$x") */
+// função para mudar o nome da var (ex: "main$x")  
 char * make_scope_name(char * name) {
     if (strcmp(escopo, "global") == 0) return name;
     
@@ -40,7 +39,6 @@ static void traverse(TreeNode * t,
     }
 }
 
-/* Função nullProc removida pois não é usada */
 
 static void insertNode(TreeNode * t)
 {
@@ -54,16 +52,14 @@ static void insertNode(TreeNode * t)
             {
                 case IdK:
                 case CallK:
-                    /* USO DE VARIÁVEL: */
                     if (st_lookup(make_scope_name(t->attr.name)) != -1) {
-                        st_insert(make_scope_name(t->attr.name), t->lineno, 0, "", "");
+                        st_insert(make_scope_name(t->attr.name), t->line_num, 0, "", "");
                     }
                     else if (st_lookup(t->attr.name) != -1) {
-                        st_insert(t->attr.name, t->lineno, 0, "", "");
+                        st_insert(t->attr.name, t->line_num, 0, "", "");
                     }
                     else {
-                        /* RECOLOCADO O ERRO DE VARIÁVEL NÃO DECLARADA */
-                        printf("ERRO SEMANTICO: Identificador '%s' nao declarado (Escopo: %s) na linha %d\n", t->attr.name, escopo, t->lineno);
+                        printf("ERRO SEMANTICO: Identificador '%s' nao declarado (Escopo: %s) - LINHA: %d\n", t->attr.name, escopo, t->line_num);
                     }
                     break;
                 default:
@@ -77,10 +73,10 @@ static void insertNode(TreeNode * t)
                 case FunK:
                     if (st_lookup(t->attr.name) == -1) {
                         char * type = (t->type == Integer) ? "int" : "void";
-                        st_insert(t->attr.name, t->lineno, location++, "global", type);
+                        st_insert(t->attr.name, t->line_num, location++, "global", type);
                         escopo = t->attr.name;
                     } else {
-                        printf("ERRO SEMANTICO: Redeclaracao de funcao '%s' na linha %d\n", t->attr.name, t->lineno);
+                        printf("ERRO SEMANTICO: Redeclaracao de funcao '%s' - LINHA:  %d\n", t->attr.name, t->line_num);
                     }
                     break;
 
@@ -88,9 +84,9 @@ static void insertNode(TreeNode * t)
                 case ParamK:
                     if (st_lookup(make_scope_name(t->attr.name)) == -1) {
                         char * type = (t->type == Integer) ? "int" : "void";
-                        st_insert(make_scope_name(t->attr.name), t->lineno, location++, escopo, type);
+                        st_insert(make_scope_name(t->attr.name), t->line_num, location++, escopo, type);
                     } else {
-                         printf("ERRO SEMANTICO: Redeclaracao de variavel '%s' no escopo '%s' na linha %d\n", t->attr.name, escopo, t->lineno);
+                         printf("ERRO SEMANTICO: Redeclaracao de variavel '%s' (Escopo '%s') - LINHA: %d\n", t->attr.name, escopo, t->line_num);
                     }
                     break;
             }
@@ -98,7 +94,8 @@ static void insertNode(TreeNode * t)
     }
 }
 
-static void afterNode(TreeNode * t) {
+// reseta escopo
+static void postProc(TreeNode * t) {
     if (t->nodekind == DecK && t->kind.dec == FunK) {
         escopo = "global";
     }
@@ -108,15 +105,14 @@ void buildSymtab(TreeNode * syntaxTree)
 {
     st_insert("input", 0, 0, "global", "int");
     st_insert("output", 0, 0, "global", "void");
-    traverse(syntaxTree, insertNode, afterNode);
+    traverse(syntaxTree, insertNode, postProc);
     printf("\n--- TABELA DE SIMBOLOS ---\n\n");
     printSymTab(stdout);
 }
 
-/* --- Verificação de Tipos --- */
 
 static void typeError(TreeNode * t, char * message) {
-    printf("ERRO SEMANTICO: %s LINHA: %d\n", message, t->lineno);
+    printf("ERRO SEMANTICO: %s - LINHA: %d\n", message, t->line_num);
 }
 
 static void checkNode(TreeNode * t) {
@@ -124,14 +120,12 @@ static void checkNode(TreeNode * t) {
         case ExpK:
             switch (t->kind.exp) {
                 case OpK:
-                    /* Aritmética */
                     if ((t->attr.op == SOMA) || (t->attr.op == SUB) ||
                         (t->attr.op == MULT) || (t->attr.op == DIV)) {
                         if ((t->child[0]->type != Integer) || (t->child[1]->type != Integer))
                             typeError(t, "Operacao aritmetica aplicada a nao-inteiro");
                         t->type = Integer;
                     }
-                    /* Comparação */
                     else if ((t->attr.op == MENOR) || (t->attr.op == IGUAL) || 
                              (t->attr.op == MAIOR) || (t->attr.op == MAIORIGUAL) ||
                              (t->attr.op == MENORIGUAL) || (t->attr.op == DIFERENTE)) {
@@ -139,7 +133,6 @@ static void checkNode(TreeNode * t) {
                             typeError(t, "Comparacao aplicada a nao-inteiro");
                         t->type = Boolean;
                     }
-                    /* Atribuição */
                     else if (t->attr.op == ATRIB) {
                         if (t->child[0]->type != Integer) typeError(t, "Atribuicao para variavel nao-inteira");
                         if (t->child[1]->type != Integer) typeError(t, "Atribuicao de valor nao-inteiro");
@@ -149,7 +142,7 @@ static void checkNode(TreeNode * t) {
 
                 case ConstK:
                     t->type = Integer;
-                    break;
+                    break; 
 
                 case IdK:
                 case CallK:
@@ -177,22 +170,16 @@ static void checkNode(TreeNode * t) {
             }
             break;
             
-        case DecK:
-            /* VERIFICAÇÃO RIGOROSA DA MAIN */
+        case DecK: // requisição do louden
             if (t->kind.dec == FunK) {
-                /* Se a função se chama "main" */
                 if (strcmp(t->attr.name, "main") == 0) {
-                    /* 1. Verifica se retorna VOID */
                     if (t->type != Void) {
                         typeError(t, "A funcao 'main' deve ser declarada como 'void main(void)'");
                     }
-                    /* 2. Verifica se não tem parâmetros */
-                    /* child[0] guarda os parâmetros. Se não for NULL e não for Void (caso especial), erro. */
                     if (t->child[0] != NULL && t->child[0]->type != Void) {
                          typeError(t, "A funcao 'main' nao deve receber parametros (use void)");
                     }
                 }
-                /* Sai do escopo */
                 escopo = "global";
             }
             break;

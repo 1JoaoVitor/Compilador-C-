@@ -5,14 +5,13 @@
 #include "globals.h"
 #include "util.h"
 
-extern int linha_atual;
+extern int line_num;
 extern int yylex();
 extern char* yytext;
-TreeNode * savedTree; /* Raiz da arvore final */
+TreeNode * savedTree;
 
 void yyerror(const char *s);
 
-/* Função auxiliar para adicionar irmão na lista */
 TreeNode * addSibling(TreeNode * t, TreeNode * s) {
     if (t != NULL) {
         TreeNode * p = t;
@@ -24,43 +23,43 @@ TreeNode * addSibling(TreeNode * t, TreeNode * s) {
 }
 %}
 
-/* DEFINIÇÃO DA UNIÃO (Tipos de dados que o Bison manipula) */
 %union {
     TreeNode * node;
     char * string;
     int val;
-    int op; /* Para guardar o token do operador */
+    int op; // token
 }
 
 %define parse.error verbose
 
-/* Tokens com tipos específicos */
-/* Tokens simples (sem valor) */
+
 %token IF ELSE INT RETURN VOID WHILE
 %token SOMA SUB MULT DIV
 %token MENOR MENORIGUAL MAIOR MAIORIGUAL IGUAL DIFERENTE ATRIB
 %token PONTOVIRGULA VIRGULA APAREN FPAREN ACOLCH FCOLCH ACHAVE FCHAVE
 
-/* Tokens que carregam valor (vindos do scanner) */
+
 %token <string> ID
 %token <val> NUM
 
-/* Tipos dos Não-Terminais (Todos retornam nós de árvore) */
+
 %type <node> declaration_list declaration var_declaration fun_declaration
 %type <node> params param_list param compound_stmt local_declarations statement_list
 %type <node> statement expression_stmt selection_stmt iteration_stmt return_stmt
 %type <node> expression var simple_expression additive_expression term factor call args arg_list
 %type <op> relop addop mulop type_specifier
 
-/* Precedência para resolver o "Dangling Else" */
+/* Cria uma regra para resolver a ambiguidade de IF, ideia da "maior igualdade"/ "maior caminho" */
 %nonassoc LOWER_THAN_ELSE
 %nonassoc ELSE
 
 %%
 
-/**********************************************************/
-/* REGRAS DA GRAMATICA E CONSTRUÇÃO DA AST                */
-/**********************************************************/
+
+
+
+
+/* CFG de fato */
 
 programa: declaration_list
         { savedTree = $1; }
@@ -87,8 +86,6 @@ var_declaration: type_specifier ID PONTOVIRGULA
                    $$ = newDecNode(VarK);
                    $$->type = ($1 == INT) ? Integer : Void;
                    $$->attr.name = $2;
-                   /* Vetor: podemos adicionar lógica extra aqui se quiser, 
-                      ou criar um filho ConstK com o tamanho */
                    TreeNode * t = newExpNode(ConstK);
                    t->attr.val = $4;
                    $$->child[0] = t; 
@@ -109,8 +106,8 @@ fun_declaration: type_specifier ID APAREN params FPAREN compound_stmt
                    $$ = newDecNode(FunK);
                    $$->type = ($1 == INT) ? Integer : Void;
                    $$->attr.name = $2;
-                   $$->child[0] = $4; /* Parametros */
-                   $$->child[1] = $6; /* Corpo da função */
+                   $$->child[0] = $4; 
+                   $$->child[1] = $6;
                }
                ;
 
@@ -133,7 +130,7 @@ param: type_specifier ID
      | type_specifier ID ACOLCH FCOLCH
      {
          $$ = newDecNode(ParamK);
-         $$->type = ($1 == INT) ? Integer : Void; /* Array param */
+         $$->type = ($1 == INT) ? Integer : Void; 
          $$->attr.name = $2;
      }
      ;
@@ -141,20 +138,20 @@ param: type_specifier ID
 compound_stmt: ACHAVE local_declarations statement_list FCHAVE
              {
                  $$ = newStmtNode(CompoundK);
-                 $$->child[0] = $2; /* Declarações locais */
-                 $$->child[1] = $3; /* Lista de comandos */
+                 $$->child[0] = $2; 
+                 $$->child[1] = $3; 
              }
              ;
 
 local_declarations: local_declarations var_declaration
                   { $$ = addSibling($1, $2); }
-                  | /* vazio */
+                  | // nada
                   { $$ = NULL; }
                   ;
 
 statement_list: statement_list statement
               { $$ = addSibling($1, $2); }
-              | /* vazio */
+              | // nada
               { $$ = NULL; }
               ;
 
@@ -177,23 +174,23 @@ expression_stmt: expression PONTOVIRGULA { $$ = $1; }
 selection_stmt: IF APAREN expression FPAREN statement %prec LOWER_THAN_ELSE
               {
                   $$ = newStmtNode(IfK);
-                  $$->child[0] = $3; /* Condição */
-                  $$->child[1] = $5; /* Then */
+                  $$->child[0] = $3; 
+                  $$->child[1] = $5; 
               }
               | IF APAREN expression FPAREN statement ELSE statement
               {
                   $$ = newStmtNode(IfK);
-                  $$->child[0] = $3; /* Condição */
-                  $$->child[1] = $5; /* Then */
-                  $$->child[2] = $7; /* Else */
+                  $$->child[0] = $3; 
+                  $$->child[1] = $5; 
+                  $$->child[2] = $7; 
               }
               ;
 
 iteration_stmt: WHILE APAREN expression FPAREN statement
               {
                   $$ = newStmtNode(WhileK);
-                  $$->child[0] = $3; /* Condição */
-                  $$->child[1] = $5; /* Corpo */
+                  $$->child[0] = $3; 
+                  $$->child[1] = $5; 
               }
               ;
 
@@ -202,7 +199,7 @@ return_stmt: RETURN PONTOVIRGULA
            | RETURN expression PONTOVIRGULA
            {
                $$ = newStmtNode(ReturnK);
-               $$->child[0] = $2; /* Valor retornado */
+               $$->child[0] = $2; 
            }
            ;
 
@@ -210,8 +207,8 @@ expression: var ATRIB expression
           {
               $$ = newExpNode(OpK);
               $$->attr.op = ATRIB;
-              $$->child[0] = $1; /* Variável */
-              $$->child[1] = $3; /* Valor */
+              $$->child[0] = $1; 
+              $$->child[1] = $3; 
           }
           | simple_expression { $$ = $1; }
           ;
@@ -225,7 +222,7 @@ var: ID
    {
        $$ = newExpNode(IdK);
        $$->attr.name = $1;
-       $$->child[0] = $3; /* Indice do vetor */
+       $$->child[0] = $3; 
    }
    ;
 
@@ -289,12 +286,12 @@ call: ID APAREN args FPAREN
     {
         $$ = newExpNode(CallK);
         $$->attr.name = $1;
-        $$->child[0] = $3; /* Argumentos */
+        $$->child[0] = $3; 
     }
     ;
 
 args: arg_list { $$ = $1; }
-    | /* vazio */ { $$ = NULL; }
+    | { $$ = NULL; }
     ;
 
 arg_list: arg_list VIRGULA expression
@@ -306,5 +303,5 @@ arg_list: arg_list VIRGULA expression
 %%
 
 void yyerror(const char *s) {
-    printf("ERRO SINTATICO: %s LINHA: %d\n", s, linha_atual);
+    printf("ERRO SINTATICO: %s LINHA: %d\n", s, line_num);
 }

@@ -1,7 +1,5 @@
-/* Teste Semantico: Variaveis */
+/* Teste Vetor */
 void main(void) {
-    int x;
-    int x; /* Erro: Redeclaracao */
-    
-    y = 10; /* Erro: y nao declarado */
+a[i] = b[i] + c[i];
+
 }

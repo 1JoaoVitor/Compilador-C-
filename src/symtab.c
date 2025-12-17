@@ -3,6 +3,7 @@
 #include <string.h>
 #include "../include/symtab.h"
 #include <string.h>
+#include "../include/util.h"
 
 #define SIZE 211
 #define SHIFT 4
@@ -18,79 +19,73 @@ static int hash(char * key) {
 }
 
 typedef struct LineListRec { 
-    int lineno;
+    int line_num;
     struct LineListRec * next;
 } * LineList;
 
 typedef struct BucketListRec { 
-    char * name;   /* Chave única (ex: main$x) usada na busca */
-    char * id;     /* Nome limpo para exibição (ex: x) */
-    char * scope;  /* Escopo para exibição (ex: main) */
-    char * type;   /* Tipo para exibição (ex: int) */
-    LineList lines;
+    char * name;   
+    char * id;   
+    char * scope; 
+    char * type;  
+    LineList lines; 
     int memloc; 
     struct BucketListRec * next;
 } * BucketList;
 
 static BucketList hashTable[SIZE];
 
-/* Helper para extrair o nome limpo de "main$x" -> "x" */
 char * cleanName(char * mangled) {
-    char * dollar = strchr(mangled, '$');
-    if (dollar) return dollar + 1; /* Retorna o que vem depois do $ */
-    return mangled; /* Se não tem $, retorna o próprio nome */
+    char * cifrao = strchr(mangled, '$');
+    if (cifrao) return cifrao + 1; 
+    return mangled;
+}
+
+
+void st_insert(char * name, int line_num, int loc, char * scope, char * typeID) {
+    int h = hash(name);
+    BucketList l = hashTable[h];
+    
+    while ((l != NULL) && (strcmp(name, l->name) != 0))
+    l = l->next;
+    
+    if (l == NULL) { 
+        l = (BucketList) malloc(sizeof(struct BucketListRec));
+        l->name = name;
+        l->lines = (LineList) malloc(sizeof(struct LineListRec));
+        l->lines->line_num = line_num;
+        l->memloc = loc;
+        l->lines->next = NULL;
+        
+        l->scope = copyString(scope);
+        l->type = copyString(typeID);
+        l->id = copyString(cleanName(name)); 
+        
+        l->next = hashTable[h];
+        hashTable[h] = l;
+    } 
+    else { 
+        LineList t = l->lines;
+        while (t->next != NULL) t = t->next;
+        t->next = (LineList) malloc(sizeof(struct LineListRec));
+        t->next->line_num = line_num;
+        t->next->next = NULL;
+    }
 }
 
 ExpType st_lookup_type(char * name) {
     int h = hash(name);
-    BucketList l = hashTable[h];
+    BucketList l = hashTable[h]; 
     
-    /* Procura na lista encadeada */
     while ((l != NULL) && (strcmp(name, l->name) != 0))
         l = l->next;
-    
-    /* Se não achou, retorna Void (padrão de segurança) */
     if (l == NULL) return Void;
     
-    /* Converte a string salva para o Enum */
     if (strcmp(l->type, "int") == 0) return Integer;
     if (strcmp(l->type, "void") == 0) return Void;
     
     return Void;
-}
-
-void st_insert(char * name, int lineno, int loc, char * scope, char * typeID) {
-    int h = hash(name);
-    BucketList l = hashTable[h];
-    
-    while ((l != NULL) && (strcmp(name, l->name) != 0))
-        l = l->next;
-    
-    if (l == NULL) { /* Nova variável */
-        l = (BucketList) malloc(sizeof(struct BucketListRec));
-        l->name = name;
-        /* Copiamos as strings para garantir persistência */
-        l->lines = (LineList) malloc(sizeof(struct LineListRec));
-        l->lines->lineno = lineno;
-        l->memloc = loc;
-        l->lines->next = NULL;
-        
-        /* Novos campos visuais */
-        l->scope = strdup(scope);
-        l->type = strdup(typeID);
-        l->id = strdup(cleanName(name)); 
-
-        l->next = hashTable[h];
-        hashTable[h] = l;
-    } 
-    else { /* Já existe, apenas adiciona linha */
-        LineList t = l->lines;
-        while (t->next != NULL) t = t->next;
-        t->next = (LineList) malloc(sizeof(struct LineListRec));
-        t->next->lineno = lineno;
-        t->next->next = NULL;
-    }
-}
+} 
 
 int st_lookup(char * name) {
     int h = hash(name);
@@ -103,7 +98,6 @@ int st_lookup(char * name) {
 
 void printSymTab(FILE * listing) {
     int i;
-    /* Cabeçalho formatado com as novas colunas */
     fprintf(listing, "Nome           Escopo         Tipo    Loc   Linhas\n");
     fprintf(listing, "-------------  -------------  ------  ----  ------\n");
     
@@ -111,12 +105,11 @@ void printSymTab(FILE * listing) {
         if (hashTable[i] != NULL) {
             BucketList l = hashTable[i];
             while (l != NULL) {
-                /* Imprime: ID Limpo, Escopo, Tipo, Loc */
                 fprintf(listing, "%-14s %-14s %-7s %-5d ", l->id, l->scope, l->type, l->memloc);
                 
                 LineList t = l->lines;
                 while (t != NULL) {
-                    fprintf(listing, "%d ", t->lineno);
+                    fprintf(listing, "%d ", t->line_num);
                     t = t->next;
                 }
                 fprintf(listing, "\n");

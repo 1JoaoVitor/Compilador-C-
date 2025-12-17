@@ -6,14 +6,13 @@
 #include "../include/util.h"
 #include <stdlib.h>
 
-extern int lineno;
-
-int linha_atual = 1;
+int line_num = 1;
 
 void erro_lexico(char *lexema) {
-    printf("ERRO LEXICO: '%s' LINHA: %d\n", lexema, linha_atual);
+    printf("ERRO LEXICO: '%s' LINHA: %d\n", lexema, line_num);
     exit(1);
 }
+
 %}
 
 %option noyywrap
@@ -29,17 +28,16 @@ ESPACO      [ \t\r]+
 "/*"             { 
                    char c;
                    for (;;) {
-                      /* Loop infinito até achar o fim ou EOF */
                       while ( (c = input()) != '*' && c != EOF ) {
-                          if (c == '\n') lineno++; /* IMPORTANTE: Conta linha dentro do comentário */
+                          if (c == '\n') line_num++;
                       }
                       if ( c == '*' ) {
                           while ( (c = input()) == '*' );
-                          if ( c == '/' ) break; /* Encontrou fim do comentário */
-                          if ( c == '\n' ) lineno++;
+                          if ( c == '/' ) break; // fim do comentario
+                          if ( c == '\n' ) line_num++;
                       }
                       if ( c == EOF ) {
-                          printf("ERRO LEXICO: Comentario nao terminado - LINHA: %d\n", lineno);
+                          printf("ERRO LEXICO: Comentario nao terminado - LINHA: %d\n", line_num);
                           exit(1);
                       }
                    }
@@ -75,7 +73,7 @@ ESPACO      [ \t\r]+
 {NUM}   { yylval.val = atoi(yytext); return NUM; }
 {ID}    { yylval.string = copyString(yytext); return ID; }
 
-\n      { linha_atual++; }
+\n      { line_num++; }
 {ESPACO}         {}
 
 .                { erro_lexico(yytext); }
